@@ -748,8 +748,15 @@ export default function PathMapperApp() {
           if (parsed) setCustomNames(parsed);
         }
 
+        // Load theme from localStorage - PERSISTS ACROSS REFRESHES
         const storedTheme = localStorage.getItem("pathmapper_theme") as ThemeKey | null;
-        if (storedTheme && storedTheme in THEMES) setThemeKey(storedTheme);
+        if (storedTheme && storedTheme in THEMES) {
+          setThemeKey(storedTheme);
+        } else {
+          // If no theme is stored, default to "dark" and save it
+          setThemeKey("dark");
+          localStorage.setItem("pathmapper_theme", "dark");
+        }
 
         const storedPin = localStorage.getItem("pathmapper_lock_pin");
         if (storedPin) {
@@ -836,8 +843,11 @@ export default function PathMapperApp() {
     save();
   }, [lockPin, encryptionKey, isStorageLoaded, isClerkLoaded]);
 
+  // Save theme to localStorage whenever it changes - PERSISTS ACROSS REFRESHES
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("pathmapper_theme", themeKey);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pathmapper_theme", themeKey);
+    }
   }, [themeKey]);
 
   // 2. Sync Effect: Auto-save messages and pipeline state for current session
