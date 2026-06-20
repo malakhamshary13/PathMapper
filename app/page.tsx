@@ -678,7 +678,18 @@ export default function PathMapperApp() {
   const [hasMounted, setHasMounted] = useState(false);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [showRateLimitCard, setShowRateLimitCard] = useState(false);
-  const [themeKey, setThemeKey] = useState<ThemeKey>("dark");
+  
+  // THEME PERSISTENCE FIX: Lazy initialization to load from localStorage immediately
+  const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("pathmapper_theme") as ThemeKey | null;
+      if (stored && stored in THEMES) {
+        return stored;
+      }
+    }
+    return "dark";
+  });
+  
   const theme = THEMES[themeKey];
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
@@ -748,15 +759,7 @@ export default function PathMapperApp() {
           if (parsed) setCustomNames(parsed);
         }
 
-        // Load theme from localStorage - PERSISTS ACROSS REFRESHES
-        const storedTheme = localStorage.getItem("pathmapper_theme") as ThemeKey | null;
-        if (storedTheme && storedTheme in THEMES) {
-          setThemeKey(storedTheme);
-        } else {
-          // If no theme is stored, default to "dark" and save it
-          setThemeKey("dark");
-          localStorage.setItem("pathmapper_theme", "dark");
-        }
+        // THEME IS ALREADY LOADED VIA LAZY INITIALIZATION - NO NEED TO LOAD HERE
 
         const storedPin = localStorage.getItem("pathmapper_lock_pin");
         if (storedPin) {
