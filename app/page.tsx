@@ -62,7 +62,7 @@ const THEMES = {
     borderStrong: "#C8C5BC",
     text: "#1A1A22",
     textMuted: "#1b1b1e",
-    textFaint: "#161414",
+    textFaint: "#fbf6f6",
     accent: "#4A7A5A",
     accentHover: "#3A6A4A",
     userBubble: "#DCF8C6",
