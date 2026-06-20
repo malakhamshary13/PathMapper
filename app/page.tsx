@@ -677,17 +677,14 @@ export default function PathMapperApp() {
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
   const [showRateLimitCard, setShowRateLimitCard] = useState(false);
   const [themeKey, setThemeKey] = useState<ThemeKey>("dark");
   const theme = THEMES[themeKey];
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // PIN state (only used in Security PIN tab)
   const [lockPin, setLockPin] = useState("");
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState(false);
-  const [setupPinInput, setSetupPinInput] = useState("");
-  const [setupPinError, setSetupPinError] = useState(false);
-
+  
   // Settings -> Security PIN change flow (requires current PIN to set a new one)
   const [currentPinInput, setCurrentPinInput] = useState("");
   const [newPinInput, setNewPinInput] = useState("");
@@ -799,7 +796,6 @@ export default function PathMapperApp() {
   }, [encryptionKey, isClerkLoaded]);
 
   // 1.5. Auto-save Sessions and Custom Names when they change (Async Encryption)
-  // 1.5. Auto-save Sessions and Custom Names when they change (Async Encryption)
   useEffect(() => {
     if (!isClerkLoaded || !isStorageLoaded) return;
     const save = async () => {
@@ -826,13 +822,11 @@ export default function PathMapperApp() {
     save();
   }, [customNames, encryptionKey, isStorageLoaded, isClerkLoaded]);
 
+  // Save PIN to localStorage
   useEffect(() => {
     if (!isClerkLoaded || !isStorageLoaded) return;
     const save = async () => {
       try {
-        // If the PIN is empty, don't write an empty pin to local storage if we want to prompt for first-time use.
-        // Wait, actually writing empty pin is okay, or we can only write it if it's set.
-        // If they clear it in settings we might want to save it as empty to prompt again.
         const encrypted = await encryptAES(encryptionKey, lockPin);
         localStorage.setItem("pathmapper_lock_pin", encrypted);
       } catch (e) {
@@ -901,47 +895,12 @@ export default function PathMapperApp() {
     prevUserRef.current = user;
   }, [user, isClerkLoaded]);
 
-  // 4. Inactivity Lock (15 Minutes)
-  const lastActivityRef = useRef<number>(Date.now());
-  useEffect(() => {
-    if (!hasMounted) return;
-
-    const updateActivity = () => {
-      lastActivityRef.current = Date.now();
-    };
-
-    window.addEventListener("mousemove", updateActivity);
-    window.addEventListener("keydown", updateActivity);
-    window.addEventListener("click", updateActivity);
-    window.addEventListener("scroll", updateActivity);
-
-    const interval = setInterval(() => {
-      if (Date.now() - lastActivityRef.current > 15 * 60 * 1000) {
-        setIsLocked(true);
-      }
-    }, 10000);
-
-    return () => {
-      window.removeEventListener("mousemove", updateActivity);
-      window.removeEventListener("keydown", updateActivity);
-      window.removeEventListener("click", updateActivity);
-      window.removeEventListener("scroll", updateActivity);
-      clearInterval(interval);
-    };
-  }, [hasMounted]);
-
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       timeoutRefs.current.forEach(clearTimeout);
     };
   }, []);
-
-  useEffect(() => {
-    if (isLocked) {
-      setPinInput("");
-      setPinError(false);
-    }
-  }, [isLocked]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1121,17 +1080,6 @@ export default function PathMapperApp() {
     localStorage.removeItem("pathmapper_current_session_id");
   };
 
-  const handleUnlock = () => {
-    if (pinInput === lockPin) {
-      setIsLocked(false);
-      setPinInput("");
-      setPinError(false);
-      lastActivityRef.current = Date.now();
-    } else {
-      setPinError(true);
-    }
-  };
-
   const resetPinChangeFields = () => {
     setCurrentPinInput("");
     setNewPinInput("");
@@ -1143,7 +1091,7 @@ export default function PathMapperApp() {
   const handlePinChange = () => {
     setPinChangeSuccess(false);
 
-    if (currentPinInput !== lockPin) {
+    if (lockPin && currentPinInput !== lockPin) {
       setPinChangeError("Current PIN is incorrect.");
       return;
     }
@@ -1159,7 +1107,7 @@ export default function PathMapperApp() {
       setPinChangeError("New PIN and confirmation do not match.");
       return;
     }
-    if (newPinInput === currentPinInput) {
+    if (lockPin && newPinInput === lockPin) {
       setPinChangeError("New PIN must be different from your current PIN.");
       return;
     }
@@ -1170,6 +1118,15 @@ export default function PathMapperApp() {
     setConfirmPinInput("");
     setPinChangeError("");
     setPinChangeSuccess(true);
+  };
+
+  const clearPin = () => {
+    setLockPin("");
+    setCurrentPinInput("");
+    setNewPinInput("");
+    setConfirmPinInput("");
+    setPinChangeError("");
+    setPinChangeSuccess(false);
   };
 
   const isDone = pipeline.phase === "done";
@@ -1862,7 +1819,7 @@ export default function PathMapperApp() {
                   </div>
                 )}
               </>
-            ) : (
+            ) : settingsTab === "security" ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <p style={{ margin: 0, fontSize: 12, color: theme.textMuted, lineHeight: 1.5 }}>
                   {lockPin
@@ -1894,7 +1851,7 @@ export default function PathMapperApp() {
                   <input
                     type="password"
                     maxLength={10}
-                    placeholder="Enter new PIN (e.g. 5829)"
+                    placeholder={lockPin ? "Enter new PIN (e.g. 5829)" : "Set a new PIN (e.g. 5829)"}
                     value={newPinInput}
                     onChange={e => {
                       const val = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
@@ -1947,17 +1904,30 @@ export default function PathMapperApp() {
                   >
                     Close
                   </button>
-                  <button
-                    onClick={handlePinChange}
-                    style={{ background: theme.accent, border: "none", color: "white", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-                  >
-                    Update PIN
-                  </button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {lockPin && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm("Are you sure you want to remove your security PIN?")) {
+                            clearPin();
+                          }
+                        }}
+                        style={{ background: "none", border: "1px solid #C45A5A33", color: "#C45A5A", padding: "8px 14px", borderRadius: 8, fontSize: 12, cursor: "pointer" }}
+                      >
+                        Remove PIN
+                      </button>
+                    )}
+                    <button
+                      onClick={handlePinChange}
+                      style={{ background: theme.accent, border: "none", color: "white", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                    >
+                      {lockPin ? "Update PIN" : "Set PIN"}
+                    </button>
+                  </div>
                 </div>
               </div>
-            )}
-
-           {settingsTab === "theme" && (
+            ) : (
+              // Theme tab
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <p style={{ margin: 0, fontSize: 12, color: theme.textMuted, lineHeight: 1.5 }}>
                   Choose a color palette for PathMapper.
@@ -2002,169 +1972,6 @@ export default function PathMapperApp() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Force PIN Setup Overlay (First Use Security Enforcement) */}
-      {isStorageLoaded && (lockPin === "" || lockPin === "1234") && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(7, 7, 10, 0.85)", backdropFilter: "blur(20px)",
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          zIndex: 9998, padding: 24, animation: "fadeIn 0.4s ease"
-        }}>
-          <div style={{
-            background: "linear-gradient(135deg, #161624 0%, #0F0F1A 100%)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: 24,
-            padding: "48px 36px", maxWidth: 420, width: "100%", textAlign: "center",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 24,
-            boxShadow: "0 0 50px rgba(91, 138, 106, 0.1), 0 20px 50px rgba(0,0,0,0.7)"
-          }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: "50%", background: "rgba(91, 138, 106, 0.1)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32,
-              border: "1px solid rgba(91, 138, 106, 0.2)", marginBottom: 4
-            }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5B8A6A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#E8E4DC", letterSpacing: "-0.5px" }}>Set Security PIN</h2>
-              <p style={{ margin: 0, fontSize: 13, color: "#8A8A9A", lineHeight: 1.6 }}>
-                To protect your decision-mapping privacy on shared devices, please set a custom security PIN. This will be required to unlock your session after 15 minutes of inactivity.
-              </p>
-            </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-              <input
-                type="text"
-                placeholder="Enter new PIN (e.g. 5829)"
-                value={setupPinInput}
-                onChange={e => {
-                  const val = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
-                  setSetupPinInput(val);
-                  setSetupPinError(false);
-                }}
-                onKeyDown={e => {
-                  if (e.key === "Enter") {
-                    if (setupPinInput.length < 4) {
-                      setSetupPinError(true);
-                    } else if (setupPinInput === "1234") {
-                      alert("For security, '1234' is not allowed as a PIN. Please set a custom PIN.");
-                    } else {
-                      setLockPin(setupPinInput);
-                      setSetupPinInput("");
-                      setSetupPinError(false);
-                    }
-                  }
-                }}
-                style={{
-                  width: "100%", background: "rgba(0, 0, 0, 0.3)", border: setupPinError ? "1px solid #C45A5A" : "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: 12, padding: "14px 18px", color: "#E8E4DC", fontSize: 15,
-                  textAlign: "center", letterSpacing: "2px", outline: "none", transition: "all 0.2s"
-                }}
-              />
-              {setupPinError ? (
-                <span style={{ color: "#C45A5A", fontSize: 12, fontWeight: 500 }}>PIN must be at least 4 characters long.</span>
-              ) : (
-                <span style={{ color: "#555", fontSize: 11 }}>Use letters or numbers. Minimum 4 characters.</span>
-              )}
-            </div>
-
-            <button
-              onClick={() => {
-                if (setupPinInput.length < 4) {
-                  setSetupPinError(true);
-                } else if (setupPinInput === "1234") {
-                  alert("For security, '1234' is not allowed as a PIN. Please set a custom PIN.");
-                } else {
-                  setLockPin(setupPinInput);
-                  setSetupPinInput("");
-                  setSetupPinError(false);
-                }
-              }}
-              style={{
-                width: "100%", background: "#5B8A6A", color: "white", border: "none",
-                borderRadius: 12, padding: "14px 24px", fontSize: 14, fontWeight: 700,
-                cursor: "pointer", transition: "all 0.2s", letterSpacing: "0.5px"
-              }}
-              onMouseEnter={e => (e.target as HTMLElement).style.background = "#6C9C7B"}
-              onMouseLeave={e => (e.target as HTMLElement).style.background = "#5B8A6A"}
-            >
-              Confirm PIN
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Lock Screen Overlay (Responsible AI) */}
-      {isLocked && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(7, 7, 10, 0.85)", backdropFilter: "blur(20px)",
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          zIndex: 9999, padding: 24, animation: "fadeIn 0.3s ease"
-        }}>
-          <div style={{
-            background: "linear-gradient(135deg, #161624 0%, #0F0F1A 100%)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: 24,
-            padding: "48px 36px", maxWidth: 420, width: "100%", textAlign: "center",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 24,
-            boxShadow: "0 0 50px rgba(91, 138, 106, 0.05), 0 20px 50px rgba(0,0,0,0.7)"
-          }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: "50%", background: "rgba(255, 255, 255, 0.03)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32,
-              border: "1px solid rgba(255, 255, 255, 0.08)", marginBottom: 4
-            }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8A8A9A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#E8E4DC", letterSpacing: "-0.5px" }}>Session Locked</h2>
-              <p style={{ margin: 0, fontSize: 13, color: "#8A8A9A", lineHeight: 1.6 }}>
-                For your privacy, this decision-mapping session has been locked due to 15 minutes of inactivity. Enter your unlock PIN to resume.
-              </p>
-            </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-              <input
-                type="password"
-                placeholder="Enter PIN"
-                value={pinInput}
-                onChange={e => {
-                  setPinInput(e.target.value);
-                  setPinError(false);
-                }}
-                onKeyDown={e => {
-                  if (e.key === "Enter") handleUnlock();
-                }}
-                style={{
-                  width: "100%", background: "rgba(0, 0, 0, 0.3)", border: pinError ? "1px solid #C45A5A" : "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: 12, padding: "14px 18px", color: "#E8E4DC", fontSize: 15,
-                  textAlign: "center", letterSpacing: "4px", outline: "none", transition: "all 0.2s"
-                }}
-              />
-              {pinError && (
-                <span style={{ color: "#C45A5A", fontSize: 12, fontWeight: 500 }}>Incorrect PIN. Please try again.</span>
-              )}
-            </div>
-
-            <button
-              onClick={handleUnlock}
-              style={{
-                width: "100%", background: "#5B8A6A", color: "white", border: "none",
-                borderRadius: 12, padding: "14px 24px", fontSize: 14, fontWeight: 700,
-                cursor: "pointer", transition: "all 0.2s", letterSpacing: "0.5px"
-              }}
-              onMouseEnter={e => (e.target as HTMLElement).style.background = "#6C9C7B"}
-              onMouseLeave={e => (e.target as HTMLElement).style.background = "#5B8A6A"}
-            >
-              Unlock Session
-            </button>
           </div>
         </div>
       )}
