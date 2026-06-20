@@ -1,7 +1,12 @@
-# dependencies
-node_modules/
+# clerk configuration (can include secrets)
+/.clerk/
+
+.env*
+
 .next/
 out/
+node_modules/
+
 
 # logs
 npm-debug.log*
@@ -25,5 +30,4 @@ Thumbs.db
 
 # IDEs & editors
 .vscode/
-.idea/
-*.swp
+

@@ -65,12 +65,11 @@ const THEMES = {
     textFaint: "#0a0a0a",
     accent: "#4A7A5A",
     accentHover: "#3A6A4A",
-    userBubble: "#DCF8C6",
-    userText: "#ffffff",
+    userBubble: "#d9fdd3",
+    userText: "#1b1b1e",
     userBorder: "#4A7A5A33",
     barBg: "#E8E5DC",
     inputBg: "#FFFFFF",
-    
   },
   ocean: {
     label: "Ocean",
@@ -148,7 +147,7 @@ async function encryptAES(password: string, plaintext: string): Promise<string> 
     const combined = new Uint8Array(iv.length + ciphertext.byteLength);
     combined.set(iv, 0);
     combined.set(new Uint8Array(ciphertext), iv.length);
-    
+
     let binary = "";
     for (let i = 0; i < combined.length; i++) {
       binary += String.fromCharCode(combined[i]);
@@ -179,16 +178,16 @@ async function decryptAES(password: string, base64: string): Promise<string> {
 }
 
 // ─── Score Bars ───────────────────────────────────────────────────────────────
-function ScoreBar({ label, a, b, barBg }: { label: string; a: number; b: number; barBg: string }) {
+function ScoreBar({ label, a, b, theme }: { label: string; a: number; b: number; theme: Theme }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-      <div style={{ fontSize: 11, color: "#999", width: 120, flexShrink: 0 }}>{label}</div>
+      <div style={{ fontSize: 11, color: theme.textMuted, width: 120, flexShrink: 0 }}>{label}</div>
       <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
-        <div style={{ flex: 1, height: 6, background: "#1E1E2E", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ flex: 1, height: 6, background: theme.barBg, borderRadius: 3, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${(a / 5) * 100}%`, background: "#3A6A9C", borderRadius: 3, transition: "width 0.6s ease" }} />
         </div>
-        <div style={{ fontSize: 10, color: "#777", width: 28, textAlign: "center", flexShrink: 0 }}>{a}:{b}</div>
-        <div style={{ flex: 1, height: 6, background: "#1E1E2E", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ fontSize: 10, color: theme.textFaint, width: 28, textAlign: "center", flexShrink: 0 }}>{a}:{b}</div>
+        <div style={{ flex: 1, height: 6, background: theme.barBg, borderRadius: 3, overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${(b / 5) * 100}%`, background: "#9C7A3A", borderRadius: 3, transition: "width 0.6s ease" }} />
         </div>
       </div>
@@ -197,27 +196,67 @@ function ScoreBar({ label, a, b, barBg }: { label: string; a: number; b: number;
 }
 
 // ─── Narrative Cards ──────────────────────────────────────────────────────────
-function NarrativeCards({ narratives, scores, theme }: { narratives: NarrativeOutput; scores: ScoringOutput; theme: Theme }) {
+function NarrativeCards({ narratives, scores, theme, isDarkBg }: { narratives: NarrativeOutput; scores: ScoringOutput; theme: Theme; isDarkBg: boolean }) {
   const totalA = Object.values(scores.path_a).reduce((s, v) => s + v, 0);
   const totalB = Object.values(scores.path_b).reduce((s, v) => s + v, 0);
   const dims = ["financial_trajectory", "growth_rate", "values_alignment", "social_capital", "stability"] as Array<keyof DimensionScores>;
+
+  const pathAStyles = isDarkBg ? {
+    bg: "#0d1a2a",
+    border: "#4A7FBF33",
+    text: "#C0B8AC",
+    flipBg: "rgba(0,0,0,0.18)",
+    flipText: "#aaa",
+    label: "#4A7FBF",
+    noteBg: "#1F2E3D",
+    noteText: "#4A7FBF"
+  } : {
+    bg: "#EBF3FC",
+    border: "#4A7FBF44",
+    text: "#2A4E78",
+    flipBg: "rgba(255,255,255,0.6)",
+    flipText: "#2A4E78",
+    label: "#2A4E78",
+    noteBg: "#D6E7FA",
+    noteText: "#2A4E78"
+  };
+
+  const pathBStyles = isDarkBg ? {
+    bg: "#1a1200",
+    border: "#B08A5A33",
+    text: "#C0B8AC",
+    flipBg: "rgba(0,0,0,0.18)",
+    flipText: "#aaa",
+    label: "#B08A5A",
+    noteBg: "#2A1F10",
+    noteText: "#C08A3E"
+  } : {
+    bg: "#FDF6ED",
+    border: "#B08A5A44",
+    text: "#785E3A",
+    flipBg: "rgba(255,255,255,0.6)",
+    flipText: "#785E3A",
+    label: "#785E3A",
+    noteBg: "#F5E6D3",
+    noteText: "#785E3A"
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* Path cards */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {[
-          { label: narratives.path_a_label, path: narratives.path_a, color: "#4A7FBF", bg: "#0d1a2a", note: scores.social_capital_note_a },
-          { label: narratives.path_b_label, path: narratives.path_b, color: "#B08A5A", bg: "#1a1200", note: scores.social_capital_note_b },
-        ].map(({ label, path, color, bg, note }) => (
-          <div key={label} style={{ background: bg, border: `1px solid ${color}33`, borderRadius: 12, padding: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color, marginBottom: 8 }}>{label}</div>
-            <p style={{ fontSize: 13, lineHeight: 1.6, color: "#C0B8AC", margin: "0 0 10px" }}>{path.body}</p>
-            <div style={{ fontSize: 11, color: "#888", background: "rgba(0,0,0,0.18)", borderRadius: 6, padding: "6px 10px", lineHeight: 1.5, marginBottom: note ? 8 : 0 }}>
-              <span style={{ fontWeight: 600, color: "#aaa" }}>Flip if: </span>{path.flip_condition}
+          { label: narratives.path_a_label, path: narratives.path_a, styles: pathAStyles, note: scores.social_capital_note_a },
+          { label: narratives.path_b_label, path: narratives.path_b, styles: pathBStyles, note: scores.social_capital_note_b },
+        ].map(({ label, path, styles, note }) => (
+          <div key={label} style={{ background: styles.bg, border: `1px solid ${styles.border}`, borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px", color: styles.label, marginBottom: 8 }}>{label}</div>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: styles.text, margin: "0 0 10px" }}>{path.body}</p>
+            <div style={{ fontSize: 11, color: styles.text, background: styles.flipBg, borderRadius: 6, padding: "6px 10px", lineHeight: 1.5, marginBottom: note ? 8 : 0 }}>
+              <span style={{ fontWeight: 600, color: styles.flipText }}>Flip if: </span>{path.flip_condition}
             </div>
             {note && (
-              <div style={{ fontSize: 10, color: "#C08A3E", background: "#2A1F10", padding: "6px 10px", borderRadius: 6, lineHeight: 1.4 }}>
+              <div style={{ fontSize: 10, color: styles.noteText, background: styles.noteBg, padding: "6px 10px", borderRadius: 6, lineHeight: 1.4 }}>
                 {note}
               </div>
             )}
@@ -228,17 +267,17 @@ function NarrativeCards({ narratives, scores, theme }: { narratives: NarrativeOu
       {/* Scores */}
       <div style={{ background: theme.surface, border: `1px solid ${theme.borderStrong}`, borderRadius: 12, padding: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, fontSize: 11, fontWeight: 600 }}>
-          <span style={{ color: "#4A7FBF", textTransform: "uppercase", letterSpacing: "0.5px" }}>{narratives.path_a_label}</span>
-          <span style={{ color: "#444", flex: 1, textAlign: "center" }}>vs</span>
-          <span style={{ color: "#B08A5A", textTransform: "uppercase", letterSpacing: "0.5px" }}>{narratives.path_b_label}</span>
+          <span style={{ color: pathAStyles.label, textTransform: "uppercase", letterSpacing: "0.5px" }}>{narratives.path_a_label}</span>
+          <span style={{ color: theme.textMuted, flex: 1, textAlign: "center" }}>vs</span>
+          <span style={{ color: pathBStyles.label, textTransform: "uppercase", letterSpacing: "0.5px" }}>{narratives.path_b_label}</span>
         </div>
         {dims.map((d) => (
-          <ScoreBar key={d} label={dimLabels[d] || d} a={scores.path_a[d]} b={scores.path_b[d]} barBg={theme.barBg} />
+          <ScoreBar key={d} label={dimLabels[d] || d} a={scores.path_a[d]} b={scores.path_b[d]} theme={theme} />
         ))}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 10, borderTop: "1px solid #1E1E2E", fontSize: 12 }}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: "#4A7FBF" }}>{totalA}/25</span>
-          <span style={{ color: "#444", flex: 1, textAlign: "center" }}>Total</span>
-          <span style={{ fontWeight: 700, fontSize: 14, color: "#B08A5A" }}>{totalB}/25</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${theme.borderStrong}`, fontSize: 12 }}>
+          <span style={{ fontWeight: 700, fontSize: 14, color: pathAStyles.label }}>{totalA}/25</span>
+          <span style={{ color: theme.textMuted, flex: 1, textAlign: "center" }}>Total</span>
+          <span style={{ fontWeight: 700, fontSize: 14, color: pathBStyles.label }}>{totalB}/25</span>
         </div>
       </div>
     </div>
@@ -246,14 +285,19 @@ function NarrativeCards({ narratives, scores, theme }: { narratives: NarrativeOu
 }
 
 // ─── Stance Card ──────────────────────────────────────────────────────────────
-function StanceCard({ stance }: { stance: StanceOutput }) {
+function StanceCard({ stance, isDarkBg, theme }: { stance: StanceOutput; isDarkBg: boolean; theme: Theme }) {
+  const textColor = isDarkBg ? "#E8E4DC" : theme.text;
+  const mutedColor = isDarkBg ? "#A0988E" : theme.textMuted;
+  const flipBg = isDarkBg ? "rgba(0,0,0,0.18)" : "rgba(0,0,0,0.05)";
+  const flipBorder = isDarkBg ? "transparent" : theme.border;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: "#E8E4DC" }}>{stance.lean}</div>
-      <div style={{ fontSize: 12, color: "#888", background: "rgba(0,0,0,0.18)", borderRadius: 8, padding: "8px 12px", lineHeight: 1.5 }}>
-        <span style={{ fontWeight: 600 }}>This changes if: </span>{stance.flip_condition}
+      <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.5, color: textColor }}>{stance.lean}</div>
+      <div style={{ fontSize: 12, color: isDarkBg ? "#888" : theme.textMuted, background: flipBg, border: `1px solid ${flipBorder}`, borderRadius: 8, padding: "8px 12px", lineHeight: 1.5 }}>
+        <span style={{ fontWeight: 600, color: textColor }}>This changes if: </span>{stance.flip_condition}
       </div>
-      <div style={{ fontSize: 13, color: "#A0988E", lineHeight: 1.7 }}>{stance.handback}</div>
+      <div style={{ fontSize: 13, color: mutedColor, lineHeight: 1.7 }}>{stance.handback}</div>
     </div>
   );
 }
@@ -274,10 +318,11 @@ function TypingDots() {
 }
 
 // ─── Chat Bubble ──────────────────────────────────────────────────────────────
-function ChatBubble({ msg, customNames, theme }: { msg: ChatMessage; customNames: Record<string, string>; theme: Theme }) {
+function ChatBubble({ msg, customNames, theme, themeKey }: { msg: ChatMessage; customNames: Record<string, string>; theme: Theme; themeKey: ThemeKey }) {
   const isUser = msg.role === "user";
   const persona = msg.persona ? PERSONAS[msg.persona as keyof typeof PERSONAS] : null;
   const getFriendName = (name: string) => customNames[name] || (PERSONAS[name as keyof typeof PERSONAS] as any)?.defaultName || name;
+  const isDarkBg = themeKey !== "light" || (persona !== null && !isUser);
 
   return (
     <div style={{ display: "flex", gap: 10, maxWidth: "92%", alignSelf: isUser ? "flex-end" : "flex-start", flexDirection: isUser ? "row-reverse" : "row", animation: "fadeIn 0.2s ease" }}>
@@ -285,9 +330,10 @@ function ChatBubble({ msg, customNames, theme }: { msg: ChatMessage; customNames
       {!isUser && persona && msg.persona && (
         <div style={{
           width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 16, flexShrink: 0, marginTop: 18, background: persona.bg, border: `2px solid ${persona.color}`
+          fontSize: 16, flexShrink: 0, marginTop: 18, background: persona.bg, border: `2px solid ${persona.color}`,
+          color: "#E8E4DC", fontWeight: "bold"
         }}
-          >{(PERSONAS[msg.persona as keyof typeof PERSONAS] as any)?.defaultName?.[0] ?? msg.persona?.[0]}</div>
+        >{(PERSONAS[msg.persona as keyof typeof PERSONAS] as any)?.defaultName?.[0] ?? msg.persona?.[0]}</div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
         {!isUser && msg.persona && (
@@ -300,7 +346,7 @@ function ChatBubble({ msg, customNames, theme }: { msg: ChatMessage; customNames
           borderRadius: isUser ? "18px 18px 4px 18px" : "4px 18px 18px 18px",
           fontSize: 14, lineHeight: 1.6,
           background: isUser ? theme.userBubble : (persona?.bg ?? theme.card),
-          color: isUser ? theme.userText : theme.text,
+          color: isUser ? theme.userText : (persona ? "#E8E4DC" : theme.text),
           border: `1px solid ${isUser ? theme.userBorder : (persona ? persona.color + "44" : theme.borderStrong)}`,
           maxWidth: msg.type === "narratives" ? 560 : undefined,
         }}>
@@ -309,9 +355,10 @@ function ChatBubble({ msg, customNames, theme }: { msg: ChatMessage; customNames
               narratives={(msg.metadata as { narratives: NarrativeOutput; scores: ScoringOutput }).narratives}
               scores={(msg.metadata as { narratives: NarrativeOutput; scores: ScoringOutput }).scores}
               theme={theme}
+              isDarkBg={isDarkBg}
             />
           ) : msg.type === "stance" && msg.metadata ? (
-            <StanceCard stance={(msg.metadata as { stance: StanceOutput }).stance} />
+            <StanceCard stance={(msg.metadata as { stance: StanceOutput }).stance} isDarkBg={isDarkBg} theme={theme} />
           ) : (
             <p style={{ margin: 0 }}>{msg.content}</p>
           )}
@@ -343,15 +390,15 @@ function WelcomeScreen({ onSend, theme }: { onSend: (text: string) => void; them
       <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1, margin: 0 }}>PathMapper</h1>
       <p style={{ color: "#888", fontSize: 15, maxWidth: 340, lineHeight: 1.5, margin: 0 }}>Your decisions, thought through — not decided for you.</p>
       <div style={{ marginTop: 16, width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 8 }}>
-        <p style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.8px", margin: "0 0 4px" }}>Select one of test scanarios to start testing:</p>
+        <p style={{ fontSize: 11, color: theme.textFaint, textTransform: "uppercase", letterSpacing: "0.8px", margin: "0 0 4px" }}>Select one of test scanarios to start testing:</p>
         {examples.map((ex, i) => (
           <button key={i} onClick={() => onSend(ex.value)} style={{
             background: theme.card, border: `1px solid ${theme.borderStrong}`, color: theme.textMuted,
             padding: "14px 18px", borderRadius: 10, textAlign: "left", fontSize: 13, lineHeight: 1.5,
             cursor: "pointer", transition: "all 0.15s", fontFamily: "inherit"
           }}
-            onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = "#5B8A6A"; (e.target as HTMLElement).style.color = "#E8E4DC"; }}
-            onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = "#2A2A3E"; (e.target as HTMLElement).style.color = "#B0A898"; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = theme.accent; (e.currentTarget as HTMLElement).style.color = theme.accent; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = theme.borderStrong; (e.currentTarget as HTMLElement).style.color = theme.textMuted; }}
           >{ex.label}</button>
         ))}
       </div>
@@ -383,16 +430,16 @@ const SIM_DATA: Record<string, { title: string; text: string }> = {
   }
 };
 
-function ResearchBarChart({ data }: { data: { label: string; value: number; color: string }[] }) {
+function ResearchBarChart({ data, theme }: { data: { label: string; value: number; color: string }[]; theme: Theme }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {data.map(d => (
         <div key={d.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ fontSize: 11, color: "#A0988E", width: 200, flexShrink: 0 }}>{d.label}</div>
-          <div style={{ flex: 1, height: 14, background: "#1E1E2E", borderRadius: 7, overflow: "hidden" }}>
+          <div style={{ fontSize: 11, color: theme.textMuted, width: 200, flexShrink: 0 }}>{d.label}</div>
+          <div style={{ flex: 1, height: 14, background: theme.barBg, borderRadius: 7, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${d.value}%`, background: d.color, borderRadius: 7, transition: "width 0.6s ease" }} />
           </div>
-          <div style={{ fontSize: 11, color: "#777", width: 30, textAlign: "right", flexShrink: 0 }}>{d.value}</div>
+          <div style={{ fontSize: 11, color: theme.textFaint, width: 30, textAlign: "right", flexShrink: 0 }}>{d.value}</div>
         </div>
       ))}
     </div>
@@ -400,8 +447,8 @@ function ResearchBarChart({ data }: { data: { label: string; value: number; colo
 }
 
 function ResearchLineChart({
-  labels, series
-}: { labels: string[]; series: { label: string; color: string; values: number[] }[] }) {
+  labels, series, theme
+}: { labels: string[]; series: { label: string; color: string; values: number[] }[]; theme: Theme }) {
   const w = 560, h = 200, padX = 10, padY = 16;
   const stepX = (w - padX * 2) / (labels.length - 1);
   const toY = (v: number) => h - padY - (v / 100) * (h - padY * 2);
@@ -410,7 +457,7 @@ function ResearchLineChart({
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: "auto", display: "block" }}>
         {[0, 25, 50, 75, 100].map(v => (
-          <line key={v} x1={padX} x2={w - padX} y1={toY(v)} y2={toY(v)} stroke="#1E1E2E" strokeWidth={1} />
+          <line key={v} x1={padX} x2={w - padX} y1={toY(v)} y2={toY(v)} stroke={theme.border} strokeWidth={1} />
         ))}
         {series.map(s => (
           <polyline
@@ -429,12 +476,12 @@ function ResearchLineChart({
           ))
         )}
       </svg>
-      <div style={{ display: "flex", justifyContent: "space-between", padding: `0 ${padX}px`, fontSize: 10, color: "#666" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", padding: `0 ${padX}px`, fontSize: 10, color: theme.textFaint }}>
         {labels.map(l => <span key={l}>{l}</span>)}
       </div>
       <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 4 }}>
         {series.map(s => (
-          <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#A0988E" }}>
+          <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: theme.textMuted }}>
             <span style={{ width: 10, height: 10, borderRadius: "50%", background: s.color, display: "inline-block" }} />
             {s.label}
           </div>
@@ -444,10 +491,10 @@ function ResearchLineChart({
   );
 }
 
-function ResearchCard({ children, accent }: { children: ReactNode; accent?: string }) {
+function ResearchCard({ children, accent, theme }: { children: ReactNode; accent?: string; theme: Theme }) {
   return (
     <div style={{
-      background: "rgba(0,0,0,0.25)", border: `1px solid ${accent ? accent + "33" : "#2A2A3E"}`,
+      background: theme.card, border: `1px solid ${accent ? accent + "33" : theme.borderStrong}`,
       borderRadius: 14, padding: 20
     }}>
       {children}
@@ -455,7 +502,7 @@ function ResearchCard({ children, accent }: { children: ReactNode; accent?: stri
   );
 }
 
-function ResearchPanel() {
+function ResearchPanel({ theme }: { theme: Theme }) {
   const [tab, setTab] = useState<"summary" | "checkpoints" | "scoring" | "simulator">("summary");
   const [simType, setSimType] = useState<keyof typeof SIM_DATA | null>(null);
 
@@ -471,21 +518,21 @@ function ResearchPanel() {
       <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
         <header style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 6 }}>
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: "-0.5px" }}>How Humans Decide Careers</h1>
-          <p style={{ fontSize: 14, color: "#8A8A9A", fontStyle: "italic", margin: 0 }}>
+          <p style={{ fontSize: 14, color: theme.textMuted, fontStyle: "italic", margin: 0 }}>
             Moving beyond the Pros/Cons list into Heuristic Reasoning.
           </p>
         </header>
 
         {/* Sub-tabs */}
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, borderBottom: "1px solid #1E1E2E", paddingBottom: 12 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, borderBottom: "1px solid " + theme.border, paddingBottom: 12 }}>
           {subTabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               style={{
-                background: tab === t.id ? "#1C1C2C" : "none",
-                border: "1px solid " + (tab === t.id ? "#5B8A6A" : "#2A2A3E"),
-                color: tab === t.id ? "#E8E4DC" : "#8A8A9A",
+                background: tab === t.id ? theme.borderStrong : "none",
+                border: "1px solid " + (tab === t.id ? theme.accent : theme.border),
+                color: tab === t.id ? theme.text : theme.textMuted,
                 fontWeight: 600, fontSize: 12, cursor: "pointer", padding: "6px 14px", borderRadius: 20,
                 transition: "all 0.15s"
               }}
@@ -498,28 +545,28 @@ function ResearchPanel() {
         {/* Executive Summary */}
         {tab === "summary" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <ResearchCard>
+            <ResearchCard theme={theme}>
               <h2 style={{ fontSize: 18, margin: "0 0 10px", fontWeight: 700 }}>The Core Thesis</h2>
-              <p style={{ fontSize: 13, lineHeight: 1.7, color: "#C0B8AC", margin: "0 0 10px" }}>
+              <p style={{ fontSize: 13, lineHeight: 1.7, color: theme.textMuted, margin: "0 0 10px" }}>
                 Career decision-making is rarely a linear calculation of utility. Research suggests humans use{" "}
-                <strong style={{ color: "#E8E4DC" }}>&quot;Bounded Rationality&quot;</strong> — we don&apos;t find the perfect solution; we find the first one that satisfies our immediate emotional safety and core identity.
+                <strong style={{ color: theme.text }}>&quot;Bounded Rationality&quot;</strong> — we don&apos;t find the perfect solution; we find the first one that satisfies our immediate emotional safety and core identity.
               </p>
-              <p style={{ fontSize: 13, lineHeight: 1.7, color: "#C0B8AC", margin: 0 }}>
+              <p style={{ fontSize: 13, lineHeight: 1.7, color: theme.textMuted, margin: 0 }}>
                 When talking to friends, humans provide &quot;noisy&quot; data. They say they want money, but their tone shifts when they talk about time. This research identifies the{" "}
-                <strong style={{ color: "#E8E4DC" }}>Cognitive Dissonance</strong> between what we say (Explicit Values) and how we feel (Implicit Fears).
+                <strong style={{ color: theme.text }}>Cognitive Dissonance</strong> between what we say (Explicit Values) and how we feel (Implicit Fears).
               </p>
             </ResearchCard>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div style={{ background: "rgba(91,138,106,0.07)", borderLeft: "3px solid #5B8A6A", borderRadius: 10, padding: 16 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 6px" }}>System 1 Thinking</h3>
-                <p style={{ fontSize: 12, color: "#8A8A9A", margin: 0, lineHeight: 1.6 }}>
+                <p style={{ fontSize: 12, color: theme.textMuted, margin: 0, lineHeight: 1.6 }}>
                   Intuitive, fast, and emotional. This is where &quot;Gut Feelings&quot; and &quot;Fear of Missing Out&quot; live. Most initial career inputs are System 1 noise.
                 </p>
               </div>
               <div style={{ background: "rgba(181,131,141,0.07)", borderLeft: "3px solid #B5838D", borderRadius: 10, padding: 16 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, margin: "0 0 6px" }}>System 2 Thinking</h3>
-                <p style={{ fontSize: 12, color: "#8A8A9A", margin: 0, lineHeight: 1.6 }}>
+                <p style={{ fontSize: 12, color: theme.textMuted, margin: 0, lineHeight: 1.6 }}>
                   Slower, analytical, and effortful. PathMapper&apos;s goal is to force the user into System 2 through strategic &quot;Checkpoints&quot;.
                 </p>
               </div>
@@ -530,37 +577,38 @@ function ResearchPanel() {
         {/* Checkpoint Science */}
         {tab === "checkpoints" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <p style={{ fontSize: 13, color: "#A0988E", lineHeight: 1.7, margin: 0 }}>
+            <p style={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.7, margin: 0 }}>
               A &quot;Friend&quot; doesn&apos;t just listen to words; they listen to the <em>gaps</em> between words. Based on conversational analysis, here is the research justification for the PathMapper Checkpoint types.
             </p>
 
-            <ResearchCard accent="#4A5568">
-              <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px", color: "#C8C4D8" }}>1. The Contradiction Signal (Cognitive Dissonance)</h3>
-              <p style={{ fontSize: 12.5, color: "#A0988E", lineHeight: 1.6, margin: "0 0 16px" }}>
-                Humans often use &quot;Professionalism&quot; as a mask for &quot;Safety.&quot; Research shows users will rank &apos;Growth&apos; as #1 but spend 80% of their description talking about &apos;Stability&apos; risks. This is a <strong style={{ color: "#E8E4DC" }}>Value-Action Gap</strong>.
+            <ResearchCard accent="#4A5568" theme={theme}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 8px", color: theme.text }}>1. The Contradiction Signal (Cognitive Dissonance)</h3>
+              <p style={{ fontSize: 12.5, color: theme.textMuted, lineHeight: 1.6, margin: "0 0 16px" }}>
+                Humans often use &quot;Professionalism&quot; as a mask for &quot;Safety.&quot; Research shows users will rank &apos;Growth&apos; as #1 but spend 80% of their description talking about &apos;Stability&apos; risks. This is a <strong style={{ color: theme.text }}>Value-Action Gap</strong>.
               </p>
               <ResearchBarChart
+                theme={theme}
                 data={[
                   { label: "Stated Priority (Money)", value: 90, color: "#B5838D" },
                   { label: "Conversational Focus (Freedom)", value: 45, color: "#8DA399" },
                 ]}
               />
-              <p style={{ fontSize: 10.5, color: "#666", textAlign: "center", margin: "10px 0 0" }}>
+              <p style={{ fontSize: 10.5, color: theme.textFaint, textAlign: "center", margin: "10px 0 0" }}>
                 The Dissonance Gap: Stated vs. Actual Emphasis
               </p>
             </ResearchCard>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 14 }}>
+              <div style={{ background: theme.card, border: `1px solid ${theme.borderStrong}`, borderRadius: 10, padding: 14 }}>
                 <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 6px" }}>Hedging (Affective Forecasting)</h4>
-                <p style={{ fontSize: 11.5, color: "#8A8A9A", margin: 0, lineHeight: 1.6 }}>
-                  When humans say &quot;I guess&quot; or &quot;Maybe,&quot; it signals a lack of <strong style={{ color: "#C0B8AC" }}>Identity Fit</strong>. They are trying on a persona they don&apos;t believe in yet.
+                <p style={{ fontSize: 11.5, color: theme.textMuted, margin: 0, lineHeight: 1.6 }}>
+                  When humans say &quot;I guess&quot; or &quot;Maybe,&quot; it signals a lack of <strong style={{ color: theme.text }}>Identity Fit</strong>. They are trying on a persona they don&apos;t believe in yet.
                 </p>
               </div>
-              <div style={{ background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 14 }}>
+              <div style={{ background: theme.card, border: `1px solid ${theme.borderStrong}`, borderRadius: 10, padding: 14 }}>
                 <h4 style={{ fontSize: 13, fontWeight: 700, margin: "0 0 6px" }}>Repetition (Anxiety Loops)</h4>
-                <p style={{ fontSize: 11.5, color: "#8A8A9A", margin: 0, lineHeight: 1.6 }}>
-                  Frequency does not always equal priority. High frequency with high-pitch/urgent vocabulary usually signals <strong style={{ color: "#C0B8AC" }}>Loss Aversion</strong>, not aspiration.
+                <p style={{ fontSize: 11.5, color: theme.textMuted, margin: 0, lineHeight: 1.6 }}>
+                  Frequency does not always equal priority. High frequency with high-pitch/urgent vocabulary usually signals <strong style={{ color: theme.text }}>Loss Aversion</strong>, not aspiration.
                 </p>
               </div>
             </div>
@@ -570,28 +618,29 @@ function ResearchPanel() {
         {/* Scoring Model */}
         {tab === "scoring" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <p style={{ fontSize: 13, color: "#A0988E", lineHeight: 1.7, margin: 0 }}>
-              How do we weigh life? Research into <strong style={{ color: "#E8E4DC" }}>Subjective Well-Being (SWB)</strong> shows that certain dimensions have a &quot;Diminishing Return&quot; while others &quot;Compound.&quot;
+            <p style={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.7, margin: 0 }}>
+              How do we weigh life? Research into <strong style={{ color: theme.text }}>Subjective Well-Being (SWB)</strong> shows that certain dimensions have a &quot;Diminishing Return&quot; while others &quot;Compound.&quot;
             </p>
 
-            <ResearchCard>
+            <ResearchCard theme={theme}>
               <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>Non-Linear Weighting of Career Dimensions</h3>
-              <p style={{ fontSize: 11.5, color: "#777", fontStyle: "italic", margin: "0 0 16px" }}>
+              <p style={{ fontSize: 11.5, color: theme.textFaint, fontStyle: "italic", margin: "0 0 16px" }}>
                 The following chart visualizes how humans <em>actually</em> feel value as a career progresses, which should inform the &quot;Deterministic Scoring Layer.&quot;
               </p>
               <ResearchLineChart
+                theme={theme}
                 labels={["Entry Level", "Mid-Career", "Senior", "Legacy"]}
                 series={[
                   { label: "Weight of Stability", color: "#B5838D", values: [80, 60, 40, 20] },
                   { label: "Weight of Values Alignment", color: "#8DA399", values: [20, 40, 70, 95] },
                 ]}
               />
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18, fontSize: 12.5, color: "#A0988E", lineHeight: 1.6 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18, fontSize: 12.5, color: theme.textMuted, lineHeight: 1.6 }}>
                 <p style={{ margin: 0 }}>
-                  <strong style={{ color: "#E8E4DC" }}>Financial Trajectory:</strong> Research shows money acts as a &quot;Hygiene Factor.&quot; Below a certain threshold, it&apos;s everything. Above it, its weighting should drop significantly in the model.
+                  <strong style={{ color: theme.text }}>Financial Trajectory:</strong> Research shows money acts as a &quot;Hygiene Factor.&quot; Below a certain threshold, it&apos;s everything. Above it, its weighting should drop significantly in the model.
                 </p>
                 <p style={{ margin: 0 }}>
-                  <strong style={{ color: "#E8E4DC" }}>Social Capital:</strong> Often ignored by users but acts as the primary &quot;Safety Net.&quot; The scoring model must weigh this higher in &quot;Pivot&quot; scenarios.
+                  <strong style={{ color: theme.text }}>Social Capital:</strong> Often ignored by users but acts as the primary &quot;Safety Net.&quot; The scoring model must weigh this higher in &quot;Pivot&quot; scenarios.
                 </p>
               </div>
             </ResearchCard>
@@ -601,12 +650,12 @@ function ResearchPanel() {
         {/* Simulator */}
         {tab === "simulator" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <p style={{ fontSize: 13, color: "#A0988E", lineHeight: 1.7, margin: 0 }}>
+            <p style={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.7, margin: 0 }}>
               Experience how the &quot;Selection Layer&quot; (Step 2 of the pipeline) chooses a checkpoint based on human reasoning patterns.
             </p>
 
-            <ResearchCard>
-              <div style={{ background: "rgba(91,138,106,0.07)", border: "1px solid #5B8A6A33", borderRadius: 10, padding: 14, fontSize: 13, color: "#C0B8AC", fontStyle: "italic", lineHeight: 1.6, marginBottom: 16 }}>
+            <ResearchCard theme={theme}>
+              <div style={{ background: theme.surface, border: `1px solid ${theme.borderStrong}`, borderRadius: 10, padding: 14, fontSize: 13, color: theme.textMuted, fontStyle: "italic", lineHeight: 1.6, marginBottom: 16 }}>
                 &quot;I want to take the startup job because the money is insane, but honestly, I&apos;m worried about the 80-hour weeks. But then again, if I don&apos;t do it now, I&apos;ll never get that title...&quot;
               </div>
 
@@ -616,9 +665,9 @@ function ResearchPanel() {
                     key={t}
                     onClick={() => setSimType(t)}
                     style={{
-                      background: simType === t ? "#1C2C22" : "#161622",
-                      border: "1px solid " + (simType === t ? "#5B8A6A" : "#2A2A3E"),
-                      color: simType === t ? "#9FD8B0" : "#B8B8C8",
+                      background: simType === t ? theme.accent : theme.surface,
+                      border: "1px solid " + (simType === t ? theme.accent : theme.borderStrong),
+                      color: simType === t ? "#FFFFFF" : theme.textMuted,
                       padding: "7px 14px", borderRadius: 20, fontSize: 12, cursor: "pointer", transition: "all 0.15s"
                     }}
                   >
@@ -627,17 +676,17 @@ function ResearchPanel() {
                 ))}
               </div>
 
-              <div style={{ minHeight: 90, borderTop: "1px solid #1E1E2E", paddingTop: 14 }}>
+              <div style={{ minHeight: 90, borderTop: "1px solid " + theme.border, paddingTop: 14 }}>
                 {simType ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <h4 style={{ fontSize: 13, fontWeight: 700, color: "#8DA399", margin: 0 }}>{SIM_DATA[simType].title}</h4>
-                    <p style={{ fontSize: 13, color: "#E0D8D0", lineHeight: 1.6, margin: 0 }}>{SIM_DATA[simType].text}</p>
-                    <div style={{ fontSize: 10, color: "#666", fontFamily: "monospace", marginTop: 4 }}>
-                      Pipeline Step 3: Checkpoint Resolution Active
+                    <p style={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.6, margin: 0 }}>{SIM_DATA[simType].text}</p>
+                    <div style={{ fontSize: 10, color: theme.textFaint, fontFamily: "monospace", marginTop: 4 }}>
+
                     </div>
                   </div>
                 ) : (
-                  <div style={{ color: "#555", textAlign: "center", fontSize: 12, marginTop: 8 }}>
+                  <div style={{ color: theme.textFaint, textAlign: "center", fontSize: 12, marginTop: 8 }}>
                     Select a pattern to see how a &quot;Friend&quot; would intervene.
                   </div>
                 )}
@@ -646,7 +695,7 @@ function ResearchPanel() {
           </div>
         )}
 
-        <footer style={{ textAlign: "center", fontSize: 11, color: "#555", fontStyle: "italic", marginTop: 8 }}>
+        <footer style={{ textAlign: "center", fontSize: 11, color: theme.textFaint, fontStyle: "italic", marginTop: 8 }}>
           Research synthesized for PathMapper — USAII 2026.
         </footer>
       </div>
@@ -666,7 +715,7 @@ export default function PathMapperApp() {
   const [typingPersona, setTypingPersona] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
-  
+
   // Custom states for persistence and editing
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -675,34 +724,38 @@ export default function PathMapperApp() {
   const [settingsTab, setSettingsTab] = useState<"names" | "security" | "theme">("names");
   const [mainView, setMainView] = useState<"chat" | "research">("chat");
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
+  const [activeDropdownSessionId, setActiveDropdownSessionId] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const [isStorageLoaded, setIsStorageLoaded] = useState(false);
   const [showRateLimitCard, setShowRateLimitCard] = useState(false);
-  
-  // THEME PERSISTENCE FIX: Lazy initialization to load from localStorage immediately
-  const [themeKey, setThemeKey] = useState<ThemeKey>(() => {
+
+  const [themeKey, setThemeKey] = useState<ThemeKey>("dark");
+  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
+
+  // Load theme immediately on client mount to avoid hydration mismatch
+  useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("pathmapper_theme") as ThemeKey | null;
       if (stored && stored in THEMES) {
-        return stored;
+        setThemeKey(stored);
       }
+      setIsThemeLoaded(true);
     }
-    return "dark";
-  });
-  
+  }, []);
+
   const theme = THEMES[themeKey];
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  
+
   // PIN state (only used in Security PIN tab)
   const [lockPin, setLockPin] = useState("");
-  
+
   // Settings -> Security PIN change flow (requires current PIN to set a new one)
   const [currentPinInput, setCurrentPinInput] = useState("");
   const [newPinInput, setNewPinInput] = useState("");
   const [confirmPinInput, setConfirmPinInput] = useState("");
   const [pinChangeError, setPinChangeError] = useState("");
   const [pinChangeSuccess, setPinChangeSuccess] = useState(false);
-  
+
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingSessionTitle, setEditingSessionTitle] = useState("");
   const [sessionToDeleteId, setSessionToDeleteId] = useState<string | null>(null);
@@ -766,7 +819,7 @@ export default function PathMapperApp() {
           const decrypted = await decryptAES(encryptionKey, storedPin);
           if (decrypted) setLockPin(decrypted);
         }
-        
+
         const storedSessions = localStorage.getItem("pathmapper_sessions");
         if (storedSessions) {
           let parsed: ChatSession[] | null = null;
@@ -779,7 +832,7 @@ export default function PathMapperApp() {
           }
           if (parsed) {
             setSessions(parsed);
-            
+
             const activeId = localStorage.getItem("pathmapper_current_session_id");
             if (activeId) {
               const activeSession = parsed.find(s => s.id === activeId);
@@ -848,19 +901,19 @@ export default function PathMapperApp() {
 
   // Save theme to localStorage whenever it changes - PERSISTS ACROSS REFRESHES
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (isThemeLoaded && typeof window !== "undefined") {
       localStorage.setItem("pathmapper_theme", themeKey);
     }
-  }, [themeKey]);
+  }, [themeKey, isThemeLoaded]);
 
   // 2. Sync Effect: Auto-save messages and pipeline state for current session
   useEffect(() => {
     if (!isClerkLoaded || !isStorageLoaded || !currentSessionId || isSwitchingRef.current || messages.length === 0) return;
-    
+
     setSessions(prev => {
       const sessionIndex = prev.findIndex(s => s.id === currentSessionId);
       let next: ChatSession[];
-      
+
       if (sessionIndex === -1) {
         const firstMsg = messages[0]?.content ?? "New Decision";
         const title = firstMsg.slice(0, 45) + (firstMsg.length > 45 ? "..." : "");
@@ -885,7 +938,7 @@ export default function PathMapperApp() {
           return s;
         });
       }
-      
+
       next.sort((a, b) => b.updatedAt - a.updatedAt);
       return next;
     });
@@ -924,7 +977,7 @@ export default function PathMapperApp() {
     timeoutRefs.current.forEach(clearTimeout);
     timeoutRefs.current = [];
     isSwitchingRef.current = true;
-    
+
     setCurrentSessionId(session.id);
     localStorage.setItem("pathmapper_current_session_id", session.id);
     setMessages(session.messages);
@@ -933,7 +986,7 @@ export default function PathMapperApp() {
     setError(null);
     setTypingPersona(null);
     setShowHistoryDrawer(false); // Close mobile drawer if open
-    
+
     setTimeout(() => {
       isSwitchingRef.current = false;
     }, 0);
@@ -952,7 +1005,7 @@ export default function PathMapperApp() {
       setEditingSessionId(null);
       return;
     }
-    
+
     setSessions(prev => {
       const next = prev.map(s => {
         if (s.id === id) {
@@ -962,7 +1015,7 @@ export default function PathMapperApp() {
       });
       return next;
     });
-    
+
     setEditingSessionId(null);
   };
 
@@ -1150,8 +1203,9 @@ export default function PathMapperApp() {
   const typingConfig = typingPersona ? (PERSONAS[typingPersona as keyof typeof PERSONAS] || PERSONAS.Sam) : PERSONAS.Sam;
 
   return (
-    <div style={{ display: "flex", height: "100dvh", width: "100vw", background: theme.bg, color: theme.text, fontFamily: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif", overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100dvh", width: "100vw", background: theme.bg, color: theme.text, fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', overflow: "hidden" }}>
       <style>{`
+        @import url('https://fonts.cdnfonts.com/css/sf-pro-display');
         @media (max-width: 768px) {
           .desktop-sidebar {
             display: none !important;
@@ -1203,16 +1257,16 @@ export default function PathMapperApp() {
       `}</style>
 
       {/* DESKTOP SIDEBAR */}
-      <aside 
-        className="desktop-sidebar" 
-        style={{ 
-          display: "flex", 
-          flexDirection: "column", 
-          width: isSidebarOpen ? 260 : 0, 
-          borderRight: isSidebarOpen ? `1px solid ${theme.border}` : "0px solid transparent", 
-          background: theme.bg, 
-          flexShrink: 0, 
-          padding: isSidebarOpen ? "16px 12px" : "16px 0", 
+      <aside
+        className="desktop-sidebar"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          width: isSidebarOpen ? 260 : 0,
+          borderRight: isSidebarOpen ? `1px solid ${theme.border}` : "0px solid transparent",
+          background: theme.bg,
+          flexShrink: 0,
+          padding: isSidebarOpen ? "16px 12px" : "16px 0",
           gap: 16,
           overflow: "hidden",
           transition: "width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
@@ -1222,7 +1276,7 @@ export default function PathMapperApp() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, fontWeight: 700, paddingLeft: 8 }}>
             PathMapper
           </div>
-          
+
           <button onClick={reset} style={{ width: "100%", padding: "10px", borderRadius: 8, background: theme.card, color: theme.text, border: `1px solid ${theme.borderStrong}`, fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "background 0.2s" }}>
             New Decision
           </button>
@@ -1272,9 +1326,9 @@ export default function PathMapperApp() {
                     onClick={() => loadSession(s)}
                     style={{
                       display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 8,
-                      background: isActive ? "#161B2A" : "transparent",
-                      border: `1px solid ${isActive ? "#3E5B8E66" : "transparent"}`,
-                      cursor: "pointer", transition: "all 0.15s", color: isActive ? "#9FC0F0" : "#A0A0B0",
+                      background: isActive ? `${theme.accent}1F` : "transparent",
+                      border: `1px solid ${isActive ? theme.accent : "transparent"}`,
+                      cursor: "pointer", transition: "all 0.15s", color: isActive ? theme.accent : theme.textMuted,
                       position: "relative"
                     }}
                     onMouseEnter={e => {
@@ -1313,25 +1367,119 @@ export default function PathMapperApp() {
                       )}
                     </div>
                     {!isEditing && (
-                      <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+                      <div style={{ display: "flex", gap: 2, alignItems: "center", position: "relative" }}>
                         <button
-                          onClick={e => startRenameSession(s, e)}
-                          style={{ background: "none", border: "none", color: "#666", cursor: "pointer", fontSize: 11, padding: 4, fontWeight: 600 }}
-                          title="Rename decision"
-                          onMouseEnter={e => e.currentTarget.style.color = "#E8E4DC"}
-                          onMouseLeave={e => e.currentTarget.style.color = "#666"}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setActiveDropdownSessionId(prev => prev === s.id ? null : s.id);
+                          }}
+                          style={{
+                            background: "none", border: "none", color: theme.textMuted, cursor: "pointer",
+                            padding: "4px 8px", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+                            borderRadius: 4, transition: "background 0.15s"
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = theme.borderStrong}
+                          onMouseLeave={e => e.currentTarget.style.background = "none"}
+                          title="Options"
                         >
-                          Edit
+                          ⋮
                         </button>
-                        <button
-                          onClick={e => askDeleteSession(s.id, e)}
-                          style={{ background: "none", border: "none", color: "#666", cursor: "pointer", fontSize: 11, padding: 4, fontWeight: 600 }}
-                          title="Delete history"
-                          onMouseEnter={e => e.currentTarget.style.color = "#E05A5A"}
-                          onMouseLeave={e => e.currentTarget.style.color = "#666"}
-                        >
-                          Del
-                        </button>
+
+                        {activeDropdownSessionId === s.id && (
+                          <>
+                            {/* Global overlay to catch clicks outside the dropdown */}
+                            <div
+                              onClick={e => {
+                                e.stopPropagation();
+                                setActiveDropdownSessionId(null);
+                              }}
+                              style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, cursor: "default" }}
+                            />
+
+                            <div
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                position: "absolute",
+                                right: 0,
+                                top: "100%",
+                                background: theme.card,
+                                border: `1px solid ${theme.borderStrong}`,
+                                borderRadius: 10,
+                                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                                padding: "6px 4px",
+                                zIndex: 9999,
+                                minWidth: 120,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 2,
+                                animation: "stressFadeIn 0.15s ease"
+                              }}
+                            >
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setActiveDropdownSessionId(null);
+                                  startRenameSession(s, e);
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: theme.text,
+                                  padding: "8px 10px",
+                                  borderRadius: 6,
+                                  fontSize: 12.5,
+                                  fontWeight: 500,
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  textAlign: "left",
+                                  width: "100%",
+                                  transition: "background 0.15s"
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = `${theme.accent}1A`}
+                                onMouseLeave={e => e.currentTarget.style.background = "none"}
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+                                  <path d="M12 20h9" />
+                                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                                </svg>
+                                Rename
+                              </button>
+                              <button
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setActiveDropdownSessionId(null);
+                                  askDeleteSession(s.id, e);
+                                }}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "#C45A5A",
+                                  padding: "8px 10px",
+                                  borderRadius: 6,
+                                  fontSize: 12.5,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  textAlign: "left",
+                                  width: "100%",
+                                  transition: "background 0.15s"
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#C45A5A1A"}
+                                onMouseLeave={e => e.currentTarget.style.background = "none"}
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2" />
+                                  <line x1="10" y1="11" x2="10" y2="17" />
+                                  <line x1="14" y1="11" x2="14" y2="17" />
+                                </svg>
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1408,9 +1556,9 @@ export default function PathMapperApp() {
                       onClick={() => loadSession(s)}
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 8,
-                        background: isActive ? "#161B2A" : "transparent",
-                        border: `1px solid ${isActive ? "#3E5B8E66" : "transparent"}`,
-                        cursor: "pointer", color: isActive ? "#9FC0F0" : "#A0A0B0"
+                        background: isActive ? `${theme.accent}1F` : "transparent",
+                        border: `1px solid ${isActive ? theme.accent : "transparent"}`,
+                        cursor: "pointer", color: isActive ? theme.accent : theme.textMuted
                       }}
                     >
                       <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1, marginRight: 8 }}>
@@ -1426,8 +1574,8 @@ export default function PathMapperApp() {
                             onClick={e => e.stopPropagation()}
                             autoFocus
                             style={{
-                              background: "#0F0F16", border: "1px solid #3E5B8E", borderRadius: 4,
-                              padding: "4px 6px", color: "#E8E4DC", fontSize: 13, width: "100%", outline: "none"
+                              background: theme.surface, border: `1px solid ${theme.accent}`, borderRadius: 4,
+                              padding: "4px 6px", color: theme.text, fontSize: 13, width: "100%", outline: "none"
                             }}
                           />
                         ) : (
@@ -1435,28 +1583,126 @@ export default function PathMapperApp() {
                             <div style={{ fontSize: 13, fontWeight: isActive ? 600 : 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {s.title}
                             </div>
-                            <div style={{ fontSize: 10, color: "#555" }}>
+                            <div style={{ fontSize: 10, color: theme.textFaint }}>
                               {new Date(s.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                             </div>
                           </>
                         )}
                       </div>
                       {!isEditing && (
-                        <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: 2, alignItems: "center", position: "relative" }}>
                           <button
-                            onClick={e => startRenameSession(s, e)}
-                            style={{ background: "none", border: "none", color: "#666", cursor: "pointer", fontSize: 11, padding: 4, fontWeight: 600 }}
-                            title="Rename decision"
+                            onClick={e => {
+                              e.stopPropagation();
+                              setActiveDropdownSessionId(prev => prev === s.id ? null : s.id);
+                            }}
+                            style={{
+                              background: "none", border: "none", color: theme.textMuted, cursor: "pointer",
+                              padding: "4px 8px", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center",
+                              borderRadius: 4, transition: "background 0.15s"
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = theme.borderStrong}
+                            onMouseLeave={e => e.currentTarget.style.background = "none"}
+                            title="Options"
                           >
-                            Edit
+                            ⋮
                           </button>
-                          <button
-                            onClick={e => askDeleteSession(s.id, e)}
-                            style={{ background: "none", border: "none", color: "#666", cursor: "pointer", fontSize: 11, padding: 4, fontWeight: 600 }}
-                            title="Delete history"
-                          >
-                            Del
-                          </button>
+
+                          {activeDropdownSessionId === s.id && (
+                            <>
+                              {/* Global overlay to catch clicks outside the dropdown */}
+                              <div
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setActiveDropdownSessionId(null);
+                                }}
+                                style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9998, cursor: "default" }}
+                              />
+
+                              <div
+                                onClick={e => e.stopPropagation()}
+                                style={{
+                                  position: "absolute",
+                                  right: 0,
+                                  top: "100%",
+                                  background: theme.card,
+                                  border: `1px solid ${theme.borderStrong}`,
+                                  borderRadius: 10,
+                                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                                  padding: "6px 4px",
+                                  zIndex: 9999,
+                                  minWidth: 120,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 2,
+                                  animation: "stressFadeIn 0.15s ease"
+                                }}
+                              >
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setActiveDropdownSessionId(null);
+                                    startRenameSession(s, e);
+                                  }}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: theme.text,
+                                    padding: "8px 10px",
+                                    borderRadius: 6,
+                                    fontSize: 12.5,
+                                    fontWeight: 500,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    textAlign: "left",
+                                    width: "100%",
+                                    transition: "background 0.15s"
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = `${theme.accent}1A`}
+                                  onMouseLeave={e => e.currentTarget.style.background = "none"}
+                                >
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+                                    <path d="M12 20h9" />
+                                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                                  </svg>
+                                  Rename
+                                </button>
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setActiveDropdownSessionId(null);
+                                    askDeleteSession(s.id, e);
+                                  }}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "#C45A5A",
+                                    padding: "8px 10px",
+                                    borderRadius: 6,
+                                    fontSize: 12.5,
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    textAlign: "left",
+                                    width: "100%",
+                                    transition: "background 0.15s"
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = "#C45A5A1A"}
+                                  onMouseLeave={e => e.currentTarget.style.background = "none"}
+                                >
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2 2v2" />
+                                    <line x1="10" y1="11" x2="10" y2="17" />
+                                    <line x1="14" y1="11" x2="14" y2="17" />
+                                  </svg>
+                                  Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1470,7 +1716,7 @@ export default function PathMapperApp() {
 
       {/* MAIN CHAT AREA */}
       <div className="main-chat-container" style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", background: theme.surface, borderLeft: `1px solid ${theme.border}`, borderRight: `1px solid ${theme.border}`, position: "relative" }}>
-        
+
         {/* Authenticated Application Header Row */}
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `1px solid ${theme.border}`, flexShrink: 0 }}>
           {/* Left Side: App Title and Subtitle */}
@@ -1480,17 +1726,17 @@ export default function PathMapperApp() {
               onClick={() => setIsSidebarOpen(prev => !prev)}
               className="desktop-sidebar-toggle-btn"
               style={{
-                background: "none", border: "none", color: "#8A8A9A", cursor: "pointer",
+                background: "none", border: "none", color: theme.textMuted, cursor: "pointer",
                 padding: 6, display: "flex", alignItems: "center", justifyContent: "center",
                 borderRadius: 6, transition: "background 0.15s, color 0.15s"
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background = "#1C1C2C";
-                e.currentTarget.style.color = "#E8E4DC";
+                e.currentTarget.style.background = theme.borderStrong;
+                e.currentTarget.style.color = theme.text;
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.background = "none";
-                e.currentTarget.style.color = "#8A8A9A";
+                e.currentTarget.style.color = theme.textMuted;
               }}
               title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
             >
@@ -1508,7 +1754,7 @@ export default function PathMapperApp() {
                   style={{ display: "none", background: "none", border: "none", color: "#E8E4DC", cursor: "pointer", fontSize: 18, padding: 0, marginRight: 4 }}
                   aria-label="Open History"
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
                 </button>
                 PathMapper
                 <span style={{ fontSize: 11, background: theme.card, color: theme.accent, padding: "2px 8px", borderRadius: 20, fontWeight: 600, letterSpacing: "0.5px" }}>BETA</span>
@@ -1589,146 +1835,147 @@ export default function PathMapperApp() {
         </header>
 
         {mainView === "research" ? (
-          <ResearchPanel />
+          <ResearchPanel theme={theme} />
         ) : (
-        <>
-        {/* Messages */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-          <StressBanner
-            level={stress.level}
-            isElevated={stress.isElevated}
-            isStable={stress.isStable}
-            secondsElevated={stress.secondsElevated}
-            dismissed={stressBannerDismissed}
-            onDismiss={() => setStressBannerDismissed(true)}
-          />
-
-          {!started
-            ? <WelcomeScreen onSend={send} theme={theme} />
-            : messages.map(msg => <ChatBubble key={msg.id} msg={msg} customNames={customNames} theme={theme} />)
-          }
-
-          {typingPersona && (
-            <div style={{ display: "flex", gap: 10, alignSelf: "flex-start", maxWidth: "92%" }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 16, flexShrink: 0, marginTop: 18, background: typingConfig.bg, border: `2px solid ${typingConfig.color}`
-              }}
-              >{typingConfig.defaultName?.[0] ?? "?"}</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: typingConfig.color, marginLeft: 2 }}>
-                  {getFriendName(typingPersona)}
-                </div>
-                <TypingDots />
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div style={{ fontSize: 12, color: "#C45A5A", padding: "8px 12px", background: "#2A1010", border: "1px solid #C45A5A33", borderRadius: 8, textAlign: "center" }}>
-              {error}
-              <button onClick={() => setError(null)} style={{ marginLeft: 8, background: "none", border: "none", color: "#C45A5A", cursor: "pointer", fontSize: 12 }}>✕</button>
-            </div>
-          )}
-
-          {showRateLimitCard && (
-            <div style={{
-              background: "#2A1515", border: "1px solid #C45A5A44", borderRadius: 12,
-              padding: 16, display: "flex", flexDirection: "column", gap: 12,
-              animation: "fadeIn 0.2s ease"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: "#F0A0A0" }}>!</span>
-                <div style={{ fontSize: 13, color: "#F0A0A0", fontWeight: 600 }}>API Quota Limit Reached</div>
-              </div>
-              <p style={{ margin: 0, fontSize: 12, color: "#D8A0A0", lineHeight: 1.5 }}>
-                We've temporarily run out of AI API tokens for this demo. Please contact the developers at <strong>devs@pathmapper.ai</strong> to get this replenished, or try again shortly.
-              </p>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <button
-                  onClick={() => setShowRateLimitCard(false)}
-                  style={{
-                    background: "#222", border: "1px solid #444", color: "#ccc",
-                    padding: "6px 12px", borderRadius: 6, fontSize: 11, cursor: "pointer",
-                    fontWeight: 600
-                  }}
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div ref={bottomRef} />
-        </div>
-
-        {/* Input */}
-        <div style={{ padding: "12px 16px", borderTop: `1px solid ${theme.border}`, flexShrink: 0, background: theme.surface }}>
-          <StuckDraftNudge
-            stuckForMs={typing.stuckForMs}
-            dismissed={stuckNudgeDismissed || !typing.isStuck}
-            onDismiss={() => setStuckNudgeDismissed(true)}
-          />
-          {stress.isElevated && (
-            <div style={{
-              display: "flex", alignItems: "center", gap: 6,
-              fontSize: 11.5, color: "#E0A080", marginBottom: 8,
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#E06B4E", flexShrink: 0 }} />
-              Stress reads {stress.level}/100 right now — worth a breath before deciding.
-            </div>
-          )}
-          {isDone ? (
-            <div style={{ textAlign: "center", fontSize: 12, color: theme.textFaint }}>
-              Analysis complete. {" "}
-              <button onClick={reset} style={{ background: "none", border: "none", color: theme.accent, cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
-                Start a new decision →
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: "flex", gap: 10, alignItems: "flex-end", background: theme.inputBg, border: `1px solid ${theme.borderStrong}`, borderRadius: 14, padding: "10px 12px" }}>
-              <textarea
-                ref={textareaRef}
-                placeholder={placeholder}
-                value={input}
-                rows={1}
-                disabled={isLoading}
-                onChange={e => {
-                  setInput(e.target.value);
-                  e.target.style.height = "auto";
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
-                  typing.registerKeystroke(lastKeyWasBackspaceRef.current, e.target.value);
-                }}
-                onKeyDown={e => {
-                  lastKeyWasBackspaceRef.current = e.key === "Backspace" || e.key === "Delete";
-                  handleKey(e);
-                }}
-                style={{
-                  flex: 1, background: "none", border: "none", outline: "none",
-                  color: theme.text, fontSize: 14, lineHeight: 1.5, resize: "none",
-                  maxHeight: 120, overflowY: "auto", fontFamily: "inherit"
-                }}
+          <>
+            {/* Messages */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+              <StressBanner
+                level={stress.level}
+                isElevated={stress.isElevated}
+                isStable={stress.isStable}
+                secondsElevated={stress.secondsElevated}
+                dismissed={stressBannerDismissed}
+                onDismiss={() => setStressBannerDismissed(true)}
               />
-              <button
-                onClick={() => send(input)}
-                disabled={isLoading || !input.trim()}
-                style={{
-                  width: 34, height: 34, borderRadius: "50%",
-                  background: isLoading || !input.trim() ? theme.borderStrong : theme.accent,
-                  border: "none", cursor: isLoading || !input.trim() ? "not-allowed" : "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0, color: "white", fontSize: 16, transition: "background 0.15s"
-                }}
-                aria-label="Send"
-              >↑</button>
+
+              {!started
+                ? <WelcomeScreen onSend={send} theme={theme} />
+                : messages.map(msg => <ChatBubble key={msg.id} msg={msg} customNames={customNames} theme={theme} themeKey={themeKey} />)
+              }
+
+              {typingPersona && (
+                <div style={{ display: "flex", gap: 10, alignSelf: "flex-start", maxWidth: "92%" }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 16, flexShrink: 0, marginTop: 18, background: typingConfig.bg, border: `2px solid ${typingConfig.color}`,
+                    color: "#E8E4DC", fontWeight: "bold"
+                  }}
+                  >{typingConfig.defaultName?.[0] ?? "?"}</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: typingConfig.color, marginLeft: 2 }}>
+                      {getFriendName(typingPersona)}
+                    </div>
+                    <TypingDots />
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div style={{ fontSize: 12, color: "#C45A5A", padding: "8px 12px", background: "#2A1010", border: "1px solid #C45A5A33", borderRadius: 8, textAlign: "center" }}>
+                  {error}
+                  <button onClick={() => setError(null)} style={{ marginLeft: 8, background: "none", border: "none", color: "#C45A5A", cursor: "pointer", fontSize: 12 }}>✕</button>
+                </div>
+              )}
+
+              {showRateLimitCard && (
+                <div style={{
+                  background: "#2A1515", border: "1px solid #C45A5A44", borderRadius: 12,
+                  padding: 16, display: "flex", flexDirection: "column", gap: 12,
+                  animation: "fadeIn 0.2s ease"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "#F0A0A0" }}>!</span>
+                    <div style={{ fontSize: 13, color: "#F0A0A0", fontWeight: 600 }}>API Quota Limit Reached</div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 12, color: "#D8A0A0", lineHeight: 1.5 }}>
+                    We've temporarily run out of AI API tokens for this demo. Please contact the developers at <strong>devs@pathmapper.ai</strong> to get this replenished, or try again shortly.
+                  </p>
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      onClick={() => setShowRateLimitCard(false)}
+                      style={{
+                        background: "#222", border: "1px solid #444", color: "#ccc",
+                        padding: "6px 12px", borderRadius: 6, fontSize: 11, cursor: "pointer",
+                        fontWeight: 600
+                      }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div ref={bottomRef} />
             </div>
-          )}
-          
-          <div style={{ textAlign: "center", fontSize: 10, color: theme.textFaint, marginTop: 8, letterSpacing: "0.2px" }}>
-            PathMapper uses AI personas to help you think through your decision.
-          </div>
-        </div>
-        </>
+
+            {/* Input */}
+            <div style={{ padding: "12px 16px", borderTop: `1px solid ${theme.border}`, flexShrink: 0, background: theme.surface }}>
+              <StuckDraftNudge
+                stuckForMs={typing.stuckForMs}
+                dismissed={stuckNudgeDismissed || !typing.isStuck}
+                onDismiss={() => setStuckNudgeDismissed(true)}
+              />
+              {stress.isElevated && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  fontSize: 11.5, color: "#E0A080", marginBottom: 8,
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#E06B4E", flexShrink: 0 }} />
+                  Stress reads {stress.level}/100 right now — worth a breath before deciding.
+                </div>
+              )}
+              {isDone ? (
+                <div style={{ textAlign: "center", fontSize: 12, color: theme.textFaint }}>
+                  Analysis complete. {" "}
+                  <button onClick={reset} style={{ background: "none", border: "none", color: theme.accent, cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
+                    Start a new decision →
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-end", background: theme.inputBg, border: `1px solid ${theme.borderStrong}`, borderRadius: 14, padding: "10px 12px" }}>
+                  <textarea
+                    ref={textareaRef}
+                    placeholder={placeholder}
+                    value={input}
+                    rows={1}
+                    disabled={isLoading}
+                    onChange={e => {
+                      setInput(e.target.value);
+                      e.target.style.height = "auto";
+                      e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+                      typing.registerKeystroke(lastKeyWasBackspaceRef.current, e.target.value);
+                    }}
+                    onKeyDown={e => {
+                      lastKeyWasBackspaceRef.current = e.key === "Backspace" || e.key === "Delete";
+                      handleKey(e);
+                    }}
+                    style={{
+                      flex: 1, background: "none", border: "none", outline: "none",
+                      color: theme.text, fontSize: 14, lineHeight: 1.5, resize: "none",
+                      maxHeight: 120, overflowY: "auto", fontFamily: "inherit"
+                    }}
+                  />
+                  <button
+                    onClick={() => send(input)}
+                    disabled={isLoading || !input.trim()}
+                    style={{
+                      width: 34, height: 34, borderRadius: "50%",
+                      background: isLoading || !input.trim() ? theme.borderStrong : theme.accent,
+                      border: "none", cursor: isLoading || !input.trim() ? "not-allowed" : "pointer",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, color: "white", fontSize: 16, transition: "background 0.15s"
+                    }}
+                    aria-label="Send"
+                  >↑</button>
+                </div>
+              )}
+
+              <div style={{ textAlign: "center", fontSize: 10, color: theme.textFaint, marginTop: 8, letterSpacing: "0.2px" }}>
+                PathMapper uses AI personas to help you think through your decision.
+              </div>
+            </div>
+          </>
         )}
       </div>
 
