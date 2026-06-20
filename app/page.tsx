@@ -70,6 +70,8 @@ const THEMES = {
     userBorder: "#4A7A5A33",
     barBg: "#E8E5DC",
     inputBg: "#FFFFFF",
+    researchBg: "#FAFAF8",
+    reseachtext: "#000000",
   },
   ocean: {
     label: "Ocean",
