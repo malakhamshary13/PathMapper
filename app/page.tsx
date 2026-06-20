@@ -61,8 +61,8 @@ const THEMES = {
     border: "#E0DDD6",
     borderStrong: "#C8C5BC",
     text: "#1A1A22",
-    textMuted: "#6B6B78",
-    textFaint: "#999",
+    textMuted: "#1b1b1e",
+    textFaint: "#161414",
     accent: "#4A7A5A",
     accentHover: "#3A6A4A",
     userBubble: "#DCF8C6",
@@ -342,7 +342,7 @@ function WelcomeScreen({ onSend, theme }: { onSend: (text: string) => void; them
       <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1, margin: 0 }}>PathMapper</h1>
       <p style={{ color: "#888", fontSize: 15, maxWidth: 340, lineHeight: 1.5, margin: 0 }}>Your decisions, thought through — not decided for you.</p>
       <div style={{ marginTop: 16, width: "100%", maxWidth: 560, display: "flex", flexDirection: "column", gap: 8 }}>
-        <p style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.8px", margin: "0 0 4px" }}>Select a scenario to start:</p>
+        <p style={{ fontSize: 11, color: "#555", textTransform: "uppercase", letterSpacing: "0.8px", margin: "0 0 4px" }}>Select one of test scanarios to start testing:</p>
         {examples.map((ex, i) => (
           <button key={i} onClick={() => onSend(ex.value)} style={{
             background: theme.card, border: `1px solid ${theme.borderStrong}`, color: theme.textMuted,
@@ -1956,7 +1956,7 @@ export default function PathMapperApp() {
               </div>
             )}
 
-            {settingsTab === "theme" && (
+           {settingsTab === "theme" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <p style={{ margin: 0, fontSize: 12, color: theme.textMuted, lineHeight: 1.5 }}>
                   Choose a color palette for PathMapper.
