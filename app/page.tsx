@@ -66,12 +66,11 @@ const THEMES = {
     accent: "#4A7A5A",
     accentHover: "#3A6A4A",
     userBubble: "#DCF8C6",
-    userText: "#fffcfc",
+    userText: "#ffffff",
     userBorder: "#4A7A5A33",
     barBg: "#E8E5DC",
     inputBg: "#FFFFFF",
-    researchBg: "#FAFAF8",
-    reseachtext: "#000000",
+    
   },
   ocean: {
     label: "Ocean",
