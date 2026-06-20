@@ -286,7 +286,7 @@ function ChatBubble({ msg, customNames, theme }: { msg: ChatMessage; customNames
           width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 16, flexShrink: 0, marginTop: 18, background: persona.bg, border: `2px solid ${persona.color}`
         }}
-          >{(PERSONAS[msg.persona as keyof typeof PERSONAS] as any)?.defaultName?.[0] ?? msg.persona[0]}</div>
+          >{(PERSONAS[msg.persona as keyof typeof PERSONAS] as any)?.defaultName?.[0] ?? msg.persona?.[0]}</div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
         {!isUser && msg.persona && (
