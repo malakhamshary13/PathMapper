@@ -281,7 +281,7 @@ function ChatBubble({ msg, customNames, theme }: { msg: ChatMessage; customNames
   return (
     <div style={{ display: "flex", gap: 10, maxWidth: "92%", alignSelf: isUser ? "flex-end" : "flex-start", flexDirection: isUser ? "row-reverse" : "row", animation: "fadeIn 0.2s ease" }}>
       <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-      {!isUser && persona && (
+      {!isUser && persona && msg.persona && (
         <div style={{
           width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 16, flexShrink: 0, marginTop: 18, background: persona.bg, border: `2px solid ${persona.color}`
