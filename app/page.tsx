@@ -1,5 +1,5 @@
 "use client";
-import { UserButton, SignInButton, SignedIn, SignedOut, useUser } from "@clerk/nextjs";
+import { UserButton, SignInButton, SignedIn, SignedOut, useUser, useClerk } from "@clerk/nextjs";
 
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import type { ChatMessage, DimensionScores, NarrativeOutput, ScoringOutput, StanceOutput, PipelinePhase, PipelineState } from "@/types/pipeline";
@@ -706,6 +706,7 @@ function ResearchPanel({ theme }: { theme: Theme }) {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function PathMapperApp() {
   const { user, isLoaded: isClerkLoaded } = useUser();
+  const { signOut } = useClerk();
   const encryptionKey = user?.id || "pathmapper-offline-key-secure-2026";
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -748,6 +749,12 @@ export default function PathMapperApp() {
 
   // PIN state (only used in Security PIN tab)
   const [lockPin, setLockPin] = useState("");
+  const [isLocked, setIsLocked] = useState(true);
+  const [lockScreenInput, setLockScreenInput] = useState("");
+  const [lockScreenError, setLockScreenError] = useState("");
+  const [obligatoryPinInput, setObligatoryPinInput] = useState("");
+  const [obligatoryPinConfirm, setObligatoryPinConfirm] = useState("");
+  const [obligatoryPinError, setObligatoryPinError] = useState("");
 
   // Settings -> Security PIN change flow (requires current PIN to set a new one)
   const [currentPinInput, setCurrentPinInput] = useState("");
@@ -817,7 +824,15 @@ export default function PathMapperApp() {
         const storedPin = localStorage.getItem("pathmapper_lock_pin");
         if (storedPin) {
           const decrypted = await decryptAES(encryptionKey, storedPin);
-          if (decrypted) setLockPin(decrypted);
+          if (decrypted) {
+            setLockPin(decrypted);
+            setIsLocked(true);
+          } else {
+            setIsLocked(false);
+          }
+        } else {
+          setLockPin("");
+          setIsLocked(false);
         }
 
         const storedSessions = localStorage.getItem("pathmapper_sessions");
@@ -952,11 +967,14 @@ export default function PathMapperApp() {
       localStorage.removeItem("pathmapper_sessions");
       localStorage.removeItem("pathmapper_current_session_id");
       localStorage.removeItem("pathmapper_custom_names");
+      localStorage.removeItem("pathmapper_lock_pin");
       setSessions([]);
       setMessages([]);
       setPipeline(INITIAL);
       setStarted(false);
       setCurrentSessionId(null);
+      setLockPin("");
+      setIsLocked(false);
     }
     prevUserRef.current = user;
   }, [user, isClerkLoaded]);
@@ -1202,10 +1220,359 @@ export default function PathMapperApp() {
 
   const typingConfig = typingPersona ? (PERSONAS[typingPersona as keyof typeof PERSONAS] || PERSONAS.Sam) : PERSONAS.Sam;
 
+  if (!isClerkLoaded || !isStorageLoaded) {
+    return (
+      <div style={{ display: "flex", height: "100dvh", width: "100vw", background: "#0A0A0F", alignItems: "center", justifyContent: "center", color: "#8A8A9A" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.5px", color: "#5B8A6A" }}>PathMapper</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#5B8A6A", animation: "dotBounce 1.2s 0ms infinite" }} />
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#5B8A6A", animation: "dotBounce 1.2s 200ms infinite" }} />
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#5B8A6A", animation: "dotBounce 1.2s 400ms infinite" }} />
+          </div>
+          <style>{`@keyframes dotBounce { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-6px);opacity:1} }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  if (lockPin && isLocked) {
+    const handleUnlock = () => {
+      if (lockScreenInput === lockPin) {
+        setIsLocked(false);
+        setLockScreenInput("");
+        setLockScreenError("");
+      } else {
+        setLockScreenError("Incorrect PIN. Please try again.");
+      }
+    };
+
+    return (
+      <div style={{
+        display: "flex",
+        height: "100dvh",
+        width: "100vw",
+        background: theme.bg,
+        alignItems: "center",
+        justifyContent: "center",
+        color: theme.text,
+        fontFamily: "inherit",
+        position: "relative",
+        overflow: "hidden"
+      }}>
+        <div style={{ position: "absolute", top: "10%", left: "10%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(91,138,106,0.1) 0%, rgba(0,0,0,0) 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: "10%", right: "10%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(181,131,141,0.06) 0%, rgba(0,0,0,0) 70%)", pointerEvents: "none" }} />
+
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 24,
+          background: theme.card,
+          border: `1px solid ${theme.borderStrong}`,
+          borderRadius: 24,
+          padding: 40,
+          width: "100%",
+          maxWidth: 380,
+          boxShadow: "0 12px 40px rgba(0, 0, 0, 0.5)",
+          textAlign: "center",
+          zIndex: 10,
+          animation: "stressFadeIn 0.3s ease",
+          boxSizing: "border-box"
+        }}>
+          <div style={{
+            width: 60,
+            height: 60,
+            borderRadius: "50%",
+            background: "rgba(91, 138, 106, 0.1)",
+            border: "1px solid rgba(91, 138, 106, 0.2)",
+            color: theme.accent,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 24,
+            marginBottom: 8
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px", margin: "0 0 6px" }}>PathMapper Locked</h2>
+            <p style={{ fontSize: 13, color: theme.textMuted, margin: 0 }}>Enter your security PIN to access your account and chats.</p>
+          </div>
+
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+            <input
+              type="password"
+              maxLength={10}
+              placeholder="••••"
+              value={lockScreenInput}
+              onChange={e => {
+                const val = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
+                setLockScreenInput(val);
+                setLockScreenError("");
+              }}
+              onKeyDown={e => {
+                if (e.key === "Enter") handleUnlock();
+              }}
+              autoFocus
+              style={{
+                width: "100%",
+                background: theme.surface,
+                border: `1px solid ${lockScreenError ? "#C45A5A" : theme.borderStrong}`,
+                borderRadius: 12,
+                padding: "14px",
+                color: theme.text,
+                fontSize: 20,
+                textAlign: "center",
+                letterSpacing: "4px",
+                outline: "none",
+                boxSizing: "border-box",
+                transition: "border-color 0.15s"
+              }}
+            />
+
+            {lockScreenError && (
+              <div style={{ fontSize: 12, color: "#F0A0A0", background: "#2A1515", border: "1px solid #C45A5A33", borderRadius: 8, padding: "8px 10px" }}>
+                {lockScreenError}
+              </div>
+            )}
+          </div>
+
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}>
+            <button
+              onClick={handleUnlock}
+              style={{
+                width: "100%",
+                background: theme.accent,
+                color: "white",
+                border: "none",
+                borderRadius: 12,
+                padding: "14px",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "background 0.15s"
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = theme.accentHover}
+              onMouseLeave={e => e.currentTarget.style.background = theme.accent}
+            >
+              Unlock Application
+            </button>
+
+            <button
+              onClick={() => signOut()}
+              style={{
+                background: "none",
+                border: "none",
+                color: theme.textMuted,
+                fontSize: 12.5,
+                cursor: "pointer",
+                textDecoration: "underline",
+                padding: "6px 0"
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = theme.text}
+              onMouseLeave={e => e.currentTarget.style.color = theme.textMuted}
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!lockPin) {
+    const handleSetObligatoryPin = () => {
+      if (obligatoryPinInput.length < 4) {
+        setObligatoryPinError("PIN must be at least 4 characters long.");
+        return;
+      }
+      if (obligatoryPinInput === "1234") {
+        setObligatoryPinError("For security, '1234' is not allowed. Please choose another.");
+        return;
+      }
+      if (obligatoryPinInput !== obligatoryPinConfirm) {
+        setObligatoryPinError("PINs do not match.");
+        return;
+      }
+
+      setLockPin(obligatoryPinInput);
+      setObligatoryPinInput("");
+      setObligatoryPinConfirm("");
+      setObligatoryPinError("");
+      setIsLocked(false);
+    };
+
+    return (
+      <div style={{
+        display: "flex",
+        height: "100dvh",
+        width: "100vw",
+        background: theme.bg,
+        alignItems: "center",
+        justifyContent: "center",
+        color: theme.text,
+        fontFamily: "inherit",
+        position: "relative",
+        overflow: "hidden"
+      }}>
+        <div style={{ position: "absolute", top: "10%", left: "10%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(91,138,106,0.1) 0%, rgba(0,0,0,0) 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: "10%", right: "10%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(181,131,141,0.06) 0%, rgba(0,0,0,0) 70%)", pointerEvents: "none" }} />
+
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 20,
+          background: theme.card,
+          border: `1px solid ${theme.borderStrong}`,
+          borderRadius: 24,
+          padding: "36px 32px",
+          width: "100%",
+          maxWidth: 420,
+          boxShadow: "0 12px 40px rgba(0, 0, 0, 0.5)",
+          zIndex: 10,
+          animation: "stressFadeIn 0.3s ease",
+          boxSizing: "border-box"
+        }}>
+          <div style={{
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            background: "rgba(91, 138, 106, 0.1)",
+            border: "1px solid rgba(91, 138, 106, 0.2)",
+            color: theme.accent,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 24,
+            marginBottom: 4
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px", margin: "0 0 8px" }}>Secure Your Career Space</h2>
+            <p style={{ fontSize: 13, color: theme.textMuted, lineHeight: 1.5, margin: 0 }}>
+              PathMapper values your privacy. To ensure your decision maps, private conversations, and emotional logs remain confidential, please assign a mandatory Security PIN.
+            </p>
+          </div>
+
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 14, marginTop: 8 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 11.5, fontWeight: 600, color: theme.textMuted }}>Choose Security PIN</label>
+              <input
+                type="password"
+                maxLength={10}
+                placeholder="Enter at least 4 digits"
+                value={obligatoryPinInput}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
+                  setObligatoryPinInput(val);
+                  setObligatoryPinError("");
+                }}
+                style={{
+                  width: "100%",
+                  background: theme.surface,
+                  border: `1px solid ${theme.borderStrong}`,
+                  borderRadius: 10,
+                  padding: "12px",
+                  color: theme.text,
+                  fontSize: 14,
+                  outline: "none",
+                  boxSizing: "border-box",
+                  letterSpacing: "2px"
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 11.5, fontWeight: 600, color: theme.textMuted }}>Confirm PIN</label>
+              <input
+                type="password"
+                maxLength={10}
+                placeholder="Re-enter your PIN"
+                value={obligatoryPinConfirm}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
+                  setObligatoryPinConfirm(val);
+                  setObligatoryPinError("");
+                }}
+                onKeyDown={e => {
+                  if (e.key === "Enter") handleSetObligatoryPin();
+                }}
+                style={{
+                  width: "100%",
+                  background: theme.surface,
+                  border: `1px solid ${theme.borderStrong}`,
+                  borderRadius: 10,
+                  padding: "12px",
+                  color: theme.text,
+                  fontSize: 14,
+                  outline: "none",
+                  boxSizing: "border-box",
+                  letterSpacing: "2px"
+                }}
+              />
+            </div>
+
+            {obligatoryPinError && (
+              <div style={{ fontSize: 12, color: "#F0A0A0", background: "#2A1515", border: "1px solid #C45A5A33", borderRadius: 8, padding: "8px 10px" }}>
+                {obligatoryPinError}
+              </div>
+            )}
+          </div>
+
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
+            <button
+              onClick={handleSetObligatoryPin}
+              style={{
+                width: "100%",
+                background: theme.accent,
+                color: "white",
+                border: "none",
+                borderRadius: 10,
+                padding: "13px",
+                fontSize: 13.5,
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "background 0.15s"
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = theme.accentHover}
+              onMouseLeave={e => e.currentTarget.style.background = theme.accent}
+            >
+              Enable Encryption & Continue
+            </button>
+
+            <button
+              onClick={() => signOut()}
+              style={{
+                background: "none",
+                border: "none",
+                color: theme.textMuted,
+                fontSize: 12,
+                cursor: "pointer",
+                textDecoration: "underline",
+                padding: "4px 0"
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", height: "100dvh", width: "100vw", background: theme.bg, color: theme.text, fontFamily: '"SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', overflow: "hidden" }}>
       <style>{`
-        @import url('https://fonts.cdnfonts.com/css/sf-pro-display');
         @media (max-width: 768px) {
           .desktop-sidebar {
             display: none !important;
@@ -2082,9 +2449,7 @@ export default function PathMapperApp() {
             ) : settingsTab === "security" ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <p style={{ margin: 0, fontSize: 12, color: theme.textMuted, lineHeight: 1.5 }}>
-                  {lockPin
-                    ? "Enter your current PIN, then choose a new one to update your session lock."
-                    : "Set a custom security PIN to lock/unlock your active session during inactivity."}
+                  Your conversations and decision maps are securely encrypted. Enter your current PIN and choose a new one to update your Security PIN.
                 </p>
 
                 {lockPin && (
@@ -2111,7 +2476,7 @@ export default function PathMapperApp() {
                   <input
                     type="password"
                     maxLength={10}
-                    placeholder={lockPin ? "Enter new PIN (e.g. 5829)" : "Set a new PIN (e.g. 5829)"}
+                    placeholder="Enter new PIN (e.g. 5829)"
                     value={newPinInput}
                     onChange={e => {
                       const val = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
@@ -2164,26 +2529,12 @@ export default function PathMapperApp() {
                   >
                     Close
                   </button>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {lockPin && (
-                      <button
-                        onClick={() => {
-                          if (window.confirm("Are you sure you want to remove your security PIN?")) {
-                            clearPin();
-                          }
-                        }}
-                        style={{ background: "none", border: "1px solid #C45A5A33", color: "#C45A5A", padding: "8px 14px", borderRadius: 8, fontSize: 12, cursor: "pointer" }}
-                      >
-                        Remove PIN
-                      </button>
-                    )}
-                    <button
-                      onClick={handlePinChange}
-                      style={{ background: theme.accent, border: "none", color: "white", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-                    >
-                      {lockPin ? "Update PIN" : "Set PIN"}
-                    </button>
-                  </div>
+                  <button
+                    onClick={handlePinChange}
+                    style={{ background: theme.accent, border: "none", color: "white", padding: "8px 18px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Update PIN
+                  </button>
                 </div>
               </div>
             ) : (
